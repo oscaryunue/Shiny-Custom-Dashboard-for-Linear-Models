@@ -4,7 +4,7 @@ library(ROCR)
 require(corrplot)
 library(effects)
 
-shinyServer(function(input,output){
+shinyServer(function(input,output,session){
 
   # Read File  
   datasource <- reactive({
@@ -284,8 +284,87 @@ shinyServer(function(input,output){
   
   #######################################################################
   #######################################################################
-  #######################################################################
+  ############ LOG FILE ########
   
+  logfilename <-   "./log.txt"
+  sourceFile <- logfilename
+ 
+  logwriter <- observe({
+    # Invalidate this observer every second (1000 milliseconds)
+    invalidateLater(1000, session)
+    # Clear log file if more than 10 entries
+    if (file.exists(logfilename) &&
+        length(readLines(logfilename)) > 10) {
+      unlink(logfilename)
+    }
+    # Add an entry to the log file
+    cat(as.character(Sys.time()), '\n', file = logfilename,
+        append = T)
+  })
+  
+  # When the client ends the session, suspend the observer and
+  # remove the log file.
+  session$onSessionEnded(function() {
+    logwriter$suspend()
+    unlink(logfilename)
+  })
+  
+  # ============================================================
+  # This part of the code monitors the file for changes once per
+  # 0.5 second (500 milliseconds).
+  fileReaderData <- reactiveFileReader(500, session,
+                                       logfilename, readLines)
+  output$fileReaderText <- renderText({
+    # Read the text, and make it a consistent number of lines so
+    # that the output box doesn't grow in height.
+    text <- fileReaderData()
+    length(text) <- 14
+    text[is.na(text)] <- ""
+    paste(text, collapse = '\n')
+  })
+  
+  
+  # ============================================================
+  # This part of the code monitors the file for changes once
+  # every four seconds.
+  
+  # readFile <- function(){
+  #   file1 <- input$file
+  #   if(is.null(file1)){
+  #     sourceFile <- "./log.txt"}
+  #   else{
+  #     sourceFile <- file1$datapath
+  #   }
+  # }
+  # 
+  # pollData <- reactivePoll(1000000, session,
+  #                          # This function returns the time that the logfile was last
+  #                          # modified
+  #                          checkFunc = function() {
+  #                            if (file.exists(readFile()))
+  #                              if(file.info(readFile())$mtime[1] > file.info(readFile())$mtime[1] - 1000){
+  #                                file.info(readFile())$mtime[1]
+  #                              }
+  #                            else
+  #                              ""
+  #                          },
+  #                          # This function returns the content of the logfile
+  #                          valueFunc = function() {
+  #                            readLines(logfilename)
+  #                          }
+  # )
+  # output$pollText <- renderText({
+  #   # Read the text, and make it a consistent number of lines so
+  #   # that the output box doesn't grow in height.
+  #   text <- pollData()
+  #   length(text) <- 14
+  #   text[is.na(text)] <- ""
+  #   paste(text, collapse = '\n')
+  # })
+  # 
+  
+  
+  #######################################################################
   ###########################  OUPUTS  ##################################  
   
   # the following renderUI is used to dynamically generate the tabsets when the file is loaded. Until the file is loaded, app will not show the tabset.
@@ -302,7 +381,7 @@ shinyServer(function(input,output){
                   tabPanel("Effects ", plotOutput("effects")), 
                   tabPanel("Regression", verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
                   tabPanel("Prediction", verbatimTextOutput("split"), verbatimTextOutput("acc"), plotOutput("roc"), tableOutput("pm")),
-                  tabPanel("Auto", tableOutput("filedf"))
+                  tabPanel("Auto", tableOutput("filedf"), verbatimTextOutput("fileReaderText"))
                   )
   })
 })
