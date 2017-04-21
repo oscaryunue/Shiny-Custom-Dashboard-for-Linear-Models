@@ -380,7 +380,7 @@ shinyServer(function(input,output,session){
                   tabPanel("Box ", plotOutput("boxplot")), 
                   tabPanel("Effects ", plotOutput("effects")), 
                   tabPanel("Regression", verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
-                  tabPanel("Prediction", verbatimTextOutput("split"), verbatimTextOutput("acc"), plotOutput("roc"), tableOutput("pm")),
+                  tabPanel("Prediction", verbatimTextOutput("split"), verbatimTextOutput("acc"), plotOutput("roc")),
                   tabPanel("Auto", tableOutput("filedf"), verbatimTextOutput("fileReaderText"))
                   )
   })
