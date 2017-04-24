@@ -3,6 +3,9 @@ library(caTools)
 library(ROCR)
 require(corrplot)
 library(effects)
+library(DT)
+library(canvasXpress)
+
 
 shinyServer(function(input,output,session){
 
@@ -80,11 +83,9 @@ shinyServer(function(input,output,session){
      })
   
   # Outputs Data
-  output$table <- renderTable({
-    if(is.null(datasource())){return ()}
-    datasource()
-  })
-  
+  output$table = DT::renderDataTable(
+    datasource(), options = list(lengthChange = FALSE)
+  )
   # Structure
   output$str <- renderPrint({
     if(is.null(datasource())){return ()}
@@ -153,6 +154,34 @@ shinyServer(function(input,output,session){
     else
       plot(runRegression(), which=4, col = terrain.colors(4), pch = 16)
   })
+
+
+  cols <- sapply(iris, is.factor)
+  iris[,cols]
+  
+  
+    output$model5 <- renderCanvasXpress({
+      if(is.null(datasource())){return()} 
+    #  isolate({
+        file1 <- input$file
+        full <- read.table(file=file1$datapath, sep=input$sep, header = input$header, stringsAsFactors = input$stringAsFactors, na.strings=c(""))
+        full <- na.omit(full)
+        ds <- full 
+        data1 <- sapply(ds, is.numeric)
+        data <- t(ds[data1])
+        if(length(data1) > 2){
+        factor <- names(Filter(is.factor, as.data.frame(ds) ))
+        logical <- names(Filter(is.logical, as.data.frame(ds) ))
+        dependent <- c(factor, logical)
+        varAnnot <- as.matrix(ds[dependent[1]])
+        colnames(varAnnot) <- dependent[1]
+        canvasXpress(t(data), varAnnot=varAnnot, graphType='Scatter3D', colorBy=dependent[1])
+        }
+  #    })
+      
+      
+
+    })
   
   ############################ DATA PREP ####################################### 
   
@@ -165,10 +194,10 @@ shinyServer(function(input,output,session){
     df <- datasource()
     if(sapply(df[input$dependent], is.factor) == T){
     df[input$dependent] <- bin()
-    glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=df, family = 'binomial')
+    glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=df, family = logOption())
     }
     else{
-      glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=df, family = 'binomial')
+    glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=df, family = logOption())
     }
 })
   
@@ -188,11 +217,18 @@ shinyServer(function(input,output,session){
   #########################  MACHINE LEARNING ###########################
   #######################################################################
 
+  logOption <- reactive({
+    if(input$logOption == "logit"){r <- binomial(link = "logit")}
+    if(input$logOption == "probit"){r <- binomial(link = "probit")}
+    r
+  })
+  
+  
   output$split <- renderPrint({
     if(is.null(data())){return ()}
     set.seed(1000)
     d <- datasource()
-    
+   # datasource()$description <- NULL
     if(sapply(d[input$dependent], is.factor) == T){
       d[input$dependent] <- bin()
     }    
@@ -201,12 +237,12 @@ shinyServer(function(input,output,session){
     # Split up the data using subset
     train = subset(d, split==TRUE)
     test = subset(d, split==FALSE)
-    trainModel <- glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=train, family = 'binomial')
+    trainModel <- glm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))),data=train, family = logOption())
     # Predictions on the test set
     predictTest = predict(trainModel, type="response", newdata=test)
     predictTest
     # Confusion matrix with threshold of 0.5
-    table(test[[input$dependent]], t <- predictTest > 0.5)
+    table(test[[input$dependent]],  predictTest > 0.5)
   }) 
 
   # PREDICTION MODEL
@@ -261,7 +297,7 @@ shinyServer(function(input,output,session){
     predictTest = predict(trainModel, type="response", newdata=test)
     predictTest
     # Confusion matrix with threshold of 0.5
-    table(test[[input$dependent]], t <- predictTest > 0.5)
+    table(test[[input$dependent]], predictTest > 0.5)
     # Test set AUC
     ROCRpred = prediction(predictTest, test[[input$dependent]])
     as.numeric(performance(ROCRpred, "auc")@y.values)
@@ -270,9 +306,7 @@ shinyServer(function(input,output,session){
     # Performance function
     ROCRperf = performance(ROCRpred, "tpr", "fpr")
     # Plot ROC curve
-    plot(ROCRperf)
-    # Add colors
-    plot(ROCRperf, colorize=TRUE)
+
     # Add threshold labels 
     plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
     
@@ -373,15 +407,16 @@ shinyServer(function(input,output,session){
     h5("No file")
      # h5("image", tags$img(src='image.png', heigth=200, width=200))
     else
-      tabsetPanel(tabPanel("About", verbatimTextOutput("str"), plotOutput("graph")),
-                  tabPanel("Data", tableOutput("table")),
-                  tabPanel("Summary", tableOutput("sum")),
-                  tabPanel("Corr ", plotOutput("corrplot")), 
-                  tabPanel("Box ", plotOutput("boxplot")), 
-                  tabPanel("Effects ", plotOutput("effects")), 
-                  tabPanel("Regression", verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
-                  tabPanel("Prediction", verbatimTextOutput("split"), verbatimTextOutput("acc"), plotOutput("roc")),
-                  tabPanel("Auto", tableOutput("filedf"), verbatimTextOutput("fileReaderText"))
+      tabsetPanel(tabPanel("About", value=1, verbatimTextOutput("str"), plotOutput("graph")),
+                  tabPanel("Data",value=2, DT::dataTableOutput('table')),
+               #   tabPanel("3d",value=4, canvasXpressOutput("model5")),
+                  tabPanel("Corr ",value=5, plotOutput("corrplot")), 
+                  tabPanel("Box ",value=6, plotOutput("boxplot")), 
+                  tabPanel("Effects ",value=7, plotOutput("effects")), 
+                  tabPanel("Regression",value=8, verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
+                  tabPanel("Prediction",value=9, verbatimTextOutput("split"), verbatimTextOutput("acc"), plotOutput("roc")),
+                  tabPanel("Auto",value=10, tableOutput("filedf"), verbatimTextOutput("fileReaderText")),
+                  id = "tabselected"
                   )
   })
 })
