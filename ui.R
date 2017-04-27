@@ -1,6 +1,6 @@
 library(shiny)
 shinyUI(fluidPage(
-  titlePanel("DESITION MAKING: LOGISTIC MODEL"),
+  titlePanel("LINEAR REGRESSION"),
   sidebarLayout(
     sidebarPanel(
       fileInput("file","Upload the file"), # fileinput() function is used to get the file upload contorl option
@@ -9,14 +9,22 @@ shinyUI(fluidPage(
       h5(helpText("Select the read.table parameters below")),
                        checkboxInput(inputId = 'header', label = 'Header', value = TRUE),
                        checkboxInput(inputId = "stringAsFactors", "stringAsFactors", TRUE),
-                       br(),
+                       br(), 
+      conditionalPanel(condition="input.tabselected==7",
+                       helpText("Perform ANOVA"),
+                       actionButton("on", label = "On"),
+                       actionButton("off", label = "Off")
+                       
+      ),      
+      conditionalPanel(condition="input.tabselected==9",
+                       sliderInput("slider1", label = "Threshold", min = 50, 
+                                   max = 100, value = 75)
+      ),      
+      br(),
                        radioButtons(inputId = 'sep', label = 'Separator', choices = c(Comma=',',Semicolon=';',Tab='\t', Space=''), selected = ','),
-                       br(),
-                       radioButtons(inputId = 'logOption', label = 'Formula', choices = c(Logit='logit',Probit='probit'), selected = 'logit'),
                        br(),
       conditionalPanel(condition="input.tabselected!=4",
                        uiOutput("dependent"),
-                       uiOutput("factors"),
                        uiOutput("sb")
                        )
                        )
