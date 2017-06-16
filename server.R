@@ -64,7 +64,6 @@ shinyServer(function(input,output,session){
   })
   
   output$sb <- renderUI({
-    # file1 <- input$file
     numerics <- names(Filter(is.numeric, as.data.frame(datasource()) ))
     logics <- getBinary(datasource())
     select <- c(numerics, logics)
@@ -100,7 +99,6 @@ shinyServer(function(input,output,session){
   # SELECTED VARIABLES
   output$content <- renderTable({
     if(is.null(input$dependet))
-      #return()
     selected()
   })
   
@@ -141,7 +139,6 @@ shinyServer(function(input,output,session){
     boxplot(cor(data()[nums]), col = cm.colors(length(nums))) 
   })
   
-  ### 
   output$effects <- renderPlot({
     if(is.null(datasource())){return ()}
     plot(allEffects(runRegression()))
@@ -185,7 +182,6 @@ shinyServer(function(input,output,session){
   
     output$model5 <- renderCanvasXpress({
       if(is.null(datasource())){return()} 
-    #  isolate({
         file1 <- input$file
         full <- read.table(file=file1$datapath, sep=input$sep, header = input$header, stringsAsFactors = input$stringAsFactors, na.strings=c(""))
         full <- na.omit(full)
@@ -200,10 +196,6 @@ shinyServer(function(input,output,session){
         colnames(varAnnot) <- dependent[1]
         canvasXpress(t(data), varAnnot=varAnnot, graphType='Scatter3D', colorBy=dependent[1])
         }
-  #    })
-      
-      
-
     })
   
   ############################ DATA PREP ####################################### 
@@ -280,31 +272,14 @@ shinyServer(function(input,output,session){
     plot(gvmodel, onepage = FALSE)
   })
   
-
   output$linearPlot <- renderPlot({
   
     if(is.null(datasource())){return ()}
-    # df <- datasource()
-    # if(sapply(df[input$dependent], is.logical) == T){
-    #   df[input$dependent] <- bin()
-    #   }
-   formula <- as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+")))    
-   # formula <- as.formula(paste(datasource()[input$dependent]," ~ ",paste(datasource()[input$independent],collapse="+")))    
-    # scatterplot( 
-    #  iris$Sepal.Width ~ iris$Sepal.Length,
-    # #  formula,
-    #  # cars$dist ~ cars$speed,
-    #   pch=16,
-    #   col= cm.colors(), 
-    #   main="Linear model",
-    #   xlab = "input$dependent",
-    #   ylab = "input$independent")
-    # 
+    formula <- as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+")))    
     scatterplot(formula, reg.line=lm,data=datasource())
     
   })
   
-
   output$predictionT <- renderPlot({
     slices <- c(input$slider1, 100-input$slider1) 
     lbls <- c(paste("Training Set: ", input$slider1), paste("Testing Set: ", 100-input$slider1))
@@ -410,8 +385,9 @@ shinyServer(function(input,output,session){
   
   #######################################################################
   ###########################  OUPUTS  ##################################  
+  #######################################################################
   
-  # the following renderUI is used to dynamically generate the tabsets when the file is loaded. Until the file is loaded, app will not show the tabset.
+  # the following renderUI is contitional will not show the tabset until the file is loaded,.
   output$tb <- renderUI({
     if(is.null(data())){
      h5(" ", tags$img(src='title.png', heigth=600, width=600))}
@@ -421,7 +397,7 @@ shinyServer(function(input,output,session){
                   tabPanel("Descriptive ",value=5,h5("Variables"), tableOutput("describe") ,h5("Correlation: Independent Variables"), plotOutput("corrplot"), h5("Variance: Independent Variables"), plotOutput("boxplot")), 
                   tabPanel("Effects ",value=7, h5("Effects: Dependent ~ Independent variables"), plotOutput("effects")), 
                   tabPanel("Model",value=8,  verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
-                  tabPanel("Disgnostics", value=10, h5("Multicolinearity"),tableOutput("vif"),h5("Diagnostics: Threshold = 0.05"), tableOutput("diagnostic"), h5("Test for Autocorrelated Errors: Durbin Watson Test")  ), 
+                  tabPanel("Disgnostics", value=10, h5("Multicolinearity"),tableOutput("vif"),h5("Diagnostics: Threshold = 0.05"), tableOutput("diagnostic") ), 
                   tabPanel("Prediction",value=9, plotOutput("predictionT") ,h5("Accuracy"), verbatimTextOutput("acc"),h5("Base model"),  plotOutput("pplot")), 
                   id = "tabselected"
                   )
