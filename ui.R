@@ -3,8 +3,8 @@ shinyUI(fluidPage(
   titlePanel("LINEAR REGRESSION"),
   sidebarLayout(
     sidebarPanel(
-      fileInput("file","Upload the file"), # fileinput() function is used to get the file upload contorl option
-      helpText("Default max. file size is 5MB"),
+      fileInput("file","Upload the file"),
+      helpText("Default: max 5MB"),
       tags$hr(),
       h5(helpText("Select the read.table parameters below")),
                        checkboxInput(inputId = 'header', label = 'Header', value = TRUE),

@@ -1,7 +1,7 @@
 library(shiny)
 library(caTools)
 library(ROCR)
-require(corrplot)
+library(corrplot)
 library(effects)
 library(DT)
 library(canvasXpress)
@@ -317,7 +317,7 @@ shinyServer(function(input,output,session){
 
   
   #######################################################################
-  #########################  MACHINE LEARNING ###########################
+  #########################  PREDICTIVE ANALISYS  #######################
   #######################################################################
 
 
@@ -326,11 +326,9 @@ shinyServer(function(input,output,session){
     if(is.null(data())){return ()}
     set.seed(1000)
     d <- datasource()
-   # datasource()$description <- NULL
     if(sapply(d[input$dependent], is.logical) == T){
       d[input$dependent] <- bin()
     }    
-
     split = sample.split(d[[input$dependent]], SplitRatio = input$slider1)
     # Split up the data using subset
     train = subset(d, split==TRUE)
@@ -386,10 +384,8 @@ shinyServer(function(input,output,session){
     test = subset(d, split==FALSE)
     trainModel <- lm(as.formula(paste(input$dependent," ~ ",paste(input$independent,collapse="+"))), data=train)
     predictTest = predict(trainModel, type="response", newdata=test)
-    
-    # Confusion matrix with threshold of 0.5
+    # Confusion matrix with threshold. Default: 0.5
     cor(predictTest, test[[input$dependent]])
-
   }) 
   
   
@@ -413,109 +409,20 @@ shinyServer(function(input,output,session){
   })
   
   #######################################################################
-  #######################################################################
-  ############ LOG FILE ########
-  
-  logfilename <-   "./log.txt"
-  sourceFile <- logfilename
- 
-  logwriter <- observe({
-    # Invalidate this observer every second (1000 milliseconds)
-    invalidateLater(1000, session)
-    # Clear log file if more than 10 entries
-    if (file.exists(logfilename) &&
-        length(readLines(logfilename)) > 10) {
-      unlink(logfilename)
-    }
-    # Add an entry to the log file
-    cat(as.character(Sys.time()), '\n', file = logfilename,
-        append = T)
-  })
-  
-  # When the client ends the session, suspend the observer and
-  # remove the log file.
-  session$onSessionEnded(function() {
-    logwriter$suspend()
-    unlink(logfilename)
-  })
-  
-  # ============================================================
-  # This part of the code monitors the file for changes once per
-  # 0.5 second (500 milliseconds).
-  fileReaderData <- reactiveFileReader(500, session,
-                                       logfilename, readLines)
-  output$fileReaderText <- renderText({
-    # Read the text, and make it a consistent number of lines so
-    # that the output box doesn't grow in height.
-    text <- fileReaderData()
-    length(text) <- 14
-    text[is.na(text)] <- ""
-    paste(text, collapse = '\n')
-  })
-  
-  
-  # ============================================================
-  # This part of the code monitors the file for changes once
-  # every four seconds.
-  
-  # readFile <- function(){
-  #   file1 <- input$file
-  #   if(is.null(file1)){
-  #     sourceFile <- "./log.txt"}
-  #   else{
-  #     sourceFile <- file1$datapath
-  #   }
-  # }
-  # 
-  # pollData <- reactivePoll(1000000, session,
-  #                          # This function returns the time that the logfile was last
-  #                          # modified
-  #                          checkFunc = function() {
-  #                            if (file.exists(readFile()))
-  #                              if(file.info(readFile())$mtime[1] > file.info(readFile())$mtime[1] - 1000){
-  #                                file.info(readFile())$mtime[1]
-  #                              }
-  #                            else
-  #                              ""
-  #                          },
-  #                          # This function returns the content of the logfile
-  #                          valueFunc = function() {
-  #                            readLines(logfilename)
-  #                          }
-  # )
-  # output$pollText <- renderText({
-  #   # Read the text, and make it a consistent number of lines so
-  #   # that the output box doesn't grow in height.
-  #   text <- pollData()
-  #   length(text) <- 14
-  #   text[is.na(text)] <- ""
-  #   paste(text, collapse = '\n')
-  # })
-  # 
-  
-  
-  #######################################################################
   ###########################  OUPUTS  ##################################  
   
   # the following renderUI is used to dynamically generate the tabsets when the file is loaded. Until the file is loaded, app will not show the tabset.
   output$tb <- renderUI({
     if(is.null(data())){
-  #  h5("No file"),
      h5(" ", tags$img(src='title.png', heigth=600, width=600))}
     else
       tabsetPanel(tabPanel("Config", value=1,  h5("Variables"), verbatimTextOutput("str"), plotOutput("graph")),
                   tabPanel("Data",value=2, DT::dataTableOutput('table')),
-               #   tabPanel("3d",value=4, canvasXpressOutput("model5")),
                   tabPanel("Descriptive ",value=5,h5("Variables"), tableOutput("describe") ,h5("Correlation: Independent Variables"), plotOutput("corrplot"), h5("Variance: Independent Variables"), plotOutput("boxplot")), 
-                #  tabPanel("Box ",value=6, plotOutput("boxplot")), 
-                  tabPanel("Effects ",value=7, h5("Effects: Dependent ~ Independent variables"), plotOutput("effects"),
-                           h5("ANOVA"), h5("Post hoc test: Tukey-Krammer")), 
+                  tabPanel("Effects ",value=7, h5("Effects: Dependent ~ Independent variables"), plotOutput("effects")), 
                   tabPanel("Model",value=8,  verbatimTextOutput("regTab"), plotOutput("model1"), plotOutput("model2"), plotOutput("model3"), plotOutput("model4")),
-                  #tabPanel("Prediction",value=9, verbatimTextOutput("split"),  verbatimTextOutput("acc"),  verbatimTextOutput("pm"), plotOutput("pplot")), #  plotOutput("roc")),
-               tabPanel("Disgnostics", value=10, h5("Multicolinearity"),tableOutput("vif"),h5("Diagnostics: Threshold = 0.05"), tableOutput("diagnostic"), h5("Test for Autocorrelated Errors: Durbin Watson Test")  ), 
-               
-                tabPanel("Prediction",value=9, plotOutput("predictionT") ,h5("Accuracy"), verbatimTextOutput("acc"),h5("Base model"),  plotOutput("pplot")), 
-                  tabPanel("Auto",value=11, h5("File path"),tableOutput("filedf"), h5("Observer: inspect datasource every = 0.5s"),verbatimTextOutput("fileReaderText")),
+                  tabPanel("Disgnostics", value=10, h5("Multicolinearity"),tableOutput("vif"),h5("Diagnostics: Threshold = 0.05"), tableOutput("diagnostic"), h5("Test for Autocorrelated Errors: Durbin Watson Test")  ), 
+                  tabPanel("Prediction",value=9, plotOutput("predictionT") ,h5("Accuracy"), verbatimTextOutput("acc"),h5("Base model"),  plotOutput("pplot")), 
                   id = "tabselected"
                   )
   })
